@@ -69,8 +69,9 @@ export default function Home() {
   };
 
   useEffect(() => {
+    const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8080";
     // Fetch available models on load
-    fetch("http://localhost:8080/models")
+    fetch(`${API_URL}/models`)
       .then(res => res.json())
       .then(data => {
         if (data.models && data.models.length > 0) {
@@ -90,7 +91,8 @@ export default function Home() {
     setResult(null);
 
     try {
-      const response = await fetch(`http://localhost:8080/predict?model_name=${encodeURIComponent(selectedModel)}`, {
+      const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8080";
+      const response = await fetch(`${API_URL}/predict?model_name=${encodeURIComponent(selectedModel)}`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json"
