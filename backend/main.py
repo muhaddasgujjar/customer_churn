@@ -1,8 +1,9 @@
 import os
 import joblib
 import pandas as pd
+import glob
 from contextlib import asynccontextmanager
-from fastapi import FastAPI, HTTPException
+from fastapi import FastAPI, HTTPException, Query
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 
@@ -61,16 +62,26 @@ class CustomerData(BaseModel):
 
 @app.get("/health")
 def read_health():
-    return {"status": "Backend is running!", "model_loaded": ml_models.get("churn_pipeline") is not None}
+    return {"status": "Backend is running!"}
+
+@app.get("/models")
+def get_models():
+    # Scan parent directory for all .pkl files
+    model_dir = os.path.join(os.path.dirname(__file__), '..', 'models')
+    pkl_files = glob.glob(os.path.join(model_dir, '*.pkl'))
+    models = [os.path.basename(f) for f in pkl_files]
+    return {"models": models}
 
 @app.post("/predict")
-def predict_churn(data: CustomerData):
-    pipeline = ml_models.get("churn_pipeline")
+def predict_churn(data: CustomerData, model_name: str = Query("model.pkl", description="Name of the pickle model to load.")):
+    pipeline = ml_models.get(model_name)
     if pipeline is None:
         try:
-            model_path = os.path.join(os.path.dirname(__file__), '..', 'model.pkl')
+            model_path = os.path.join(os.path.dirname(__file__), '..', 'models', model_name)
+            if not os.path.exists(model_path):
+                raise FileNotFoundError(f"Model {model_name} does not exist.")
             pipeline = joblib.load(model_path)
-            ml_models["churn_pipeline"] = pipeline
+            ml_models[model_name] = pipeline
         except Exception as e:
             raise HTTPException(status_code=500, detail=f"Machine Learning model failed to load: {e}")
         

@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { 
   Building2, 
   CreditCard, 
@@ -39,6 +39,9 @@ export default function Home() {
     PaperlessBilling: "Yes"
   });
 
+  const [availableModels, setAvailableModels] = useState<string[]>(['model.pkl']);
+  const [selectedModel, setSelectedModel] = useState<string>("model.pkl");
+
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [result, setResult] = useState<{
@@ -65,6 +68,21 @@ export default function Home() {
     });
   };
 
+  useEffect(() => {
+    // Fetch available models on load
+    fetch("http://localhost:8080/models")
+      .then(res => res.json())
+      .then(data => {
+        if (data.models && data.models.length > 0) {
+          setAvailableModels(data.models);
+          if (!data.models.includes(selectedModel)) {
+            setSelectedModel(data.models[0]);
+          }
+        }
+      })
+      .catch(err => console.error("Could not fetch models:", err));
+  }, []);
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
@@ -72,7 +90,7 @@ export default function Home() {
     setResult(null);
 
     try {
-      const response = await fetch("http://localhost:8080/predict", {
+      const response = await fetch(`http://localhost:8080/predict?model_name=${encodeURIComponent(selectedModel)}`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json"
@@ -115,8 +133,17 @@ export default function Home() {
               <h1 className="text-xl font-bold tracking-tight text-white">Churn<span className="text-indigo-400">Sight</span></h1>
             </div>
           </div>
-          <div className="text-xs font-semibold px-3 py-1 bg-white/10 rounded-full text-indigo-300 border border-white/5">
-            Enterprise Model Active
+          <div className="flex items-center space-x-3">
+             <span className="text-sm text-gray-400 hidden md:inline-block">Active Model:</span>
+             <select 
+                value={selectedModel}
+                onChange={(e) => setSelectedModel(e.target.value)}
+                className="text-xs font-semibold px-3 py-1.5 bg-white/10 rounded-full text-indigo-300 border border-white/5 outline-none focus:ring-2 focus:ring-indigo-500 appearance-none cursor-pointer"
+             >
+                {availableModels.map(m => (
+                  <option key={m} value={m} className="bg-gray-900 text-white">{m}</option>
+                ))}
+             </select>
           </div>
         </div>
       </nav>
